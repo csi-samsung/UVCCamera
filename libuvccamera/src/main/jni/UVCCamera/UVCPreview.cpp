@@ -476,8 +476,9 @@ int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl) {
 	uvc_error_t result;
 
 	ENTER();
+	LOGV("prepare_preview (%d,%d)@%s", requestWidth, requestHeight, (!requestMode ? "BGR" : "MJPEG"));
 	result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, ctrl,
-		!requestMode ? UVC_FRAME_FORMAT_YUYV : UVC_FRAME_FORMAT_MJPEG,
+		!requestMode ? UVC_FRAME_FORMAT_BGR : UVC_FRAME_FORMAT_MJPEG,
 		requestWidth, requestHeight, requestMinFps, requestMaxFps
 	);
 	if (LIKELY(!result)) {
