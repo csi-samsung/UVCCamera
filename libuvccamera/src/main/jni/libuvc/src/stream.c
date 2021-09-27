@@ -91,26 +91,26 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
       _fmt, 0, __VA_ARGS__, 0, NULL }; \
     return &_fmt##_entry; }
 
-	switch (format) {
-	/* Define new formats here */
-	ABS_FMT(UVC_FRAME_FORMAT_ANY,
-		{UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
+    switch(format) {
+        /* Define new formats here */
+        ABS_FMT(UVC_FRAME_FORMAT_ANY,
+          {UVC_FRAME_FORMAT_UNCOMPRESSED, UVC_FRAME_FORMAT_COMPRESSED})
 
-	ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED,
-		{UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8})
-	FMT(UVC_FRAME_FORMAT_YUYV,
-		{'Y', 'U', 'Y', '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
-	FMT(UVC_FRAME_FORMAT_UYVY,
-		{'U', 'Y', 'V', 'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
-	FMT(UVC_FRAME_FORMAT_GRAY8,
-		{'Y', '8', '0', '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
-    FMT(UVC_FRAME_FORMAT_BY8,
-    	{'B', 'Y', '8', ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        ABS_FMT(UVC_FRAME_FORMAT_UNCOMPRESSED,
+          {UVC_FRAME_FORMAT_YUYV, UVC_FRAME_FORMAT_UYVY, UVC_FRAME_FORMAT_GRAY8, UVC_FRAME_FORMAT_BGR})
+        FMT(UVC_FRAME_FORMAT_YUYV,
+          {'Y',  'U',  'Y',  '2', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_UYVY,
+          {'U',  'Y',  'V',  'Y', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_GRAY8,
+          {'Y',  '8',  '0',  '0', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
+        FMT(UVC_FRAME_FORMAT_BGR,
+          {0x7d, 0xeb, 0x36, 0xe4, 0x4f, 0x52, 0xce, 0x11, 0x9f, 0x53, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70})
 
-	ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED,
-		{UVC_FRAME_FORMAT_MJPEG})
-	FMT(UVC_FRAME_FORMAT_MJPEG,
-		{'M', 'J', 'P', 'G'})
+        ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED,
+          {UVC_FRAME_FORMAT_MJPEG})
+        FMT(UVC_FRAME_FORMAT_MJPEG,
+          {'M',  'J',  'P',  'G'})
 
 	default:
 		return NULL;
@@ -1686,6 +1686,12 @@ void _uvc_populate_frame(uvc_stream_handle_t *strmh) {
 	switch (frame->frame_format) {
 	case UVC_FRAME_FORMAT_YUYV:
 		frame->step = frame->width * 2;
+		break;
+	case UVC_FRAME_FORMAT_RGB:
+		frame->step = frame->width * 3;
+		break;
+	case UVC_FRAME_FORMAT_BGR:
+		frame->step = frame->width * 3;
 		break;
 	case UVC_FRAME_FORMAT_MJPEG:
 		frame->step = 0;

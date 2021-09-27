@@ -262,6 +262,16 @@ void UVCPreview::callbackPixelFormatChanged() {
 		LOGI("PIXEL_FORMAT_YUV:");
 		callbackPixelBytes = sz * 2;
 		break;
+	  case PIXEL_FORMAT_RGB:
+		LOGI("PIXEL_FORMAT_RGB:");
+		mFrameCallbackFunc = uvc_any2rgb;
+		callbackPixelBytes = sz * 3;
+		break;
+	  case PIXEL_FORMAT_BGR:
+		LOGI("PIXEL_FORMAT_BGR:");
+		mFrameCallbackFunc = uvc_any2bgr;
+		callbackPixelBytes = sz * 3;
+		break;
 	  case PIXEL_FORMAT_RGB565:
 		LOGI("PIXEL_FORMAT_RGB565:");
 		mFrameCallbackFunc = uvc_any2rgb565;
@@ -476,7 +486,7 @@ int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl) {
 	uvc_error_t result;
 
 	ENTER();
-	LOGV("prepare_preview (%d,%d)@%s", requestWidth, requestHeight, (!requestMode ? "BGR" : "MJPEG"));
+	LOGV("prepare_preview (%d,%d) (%d)", requestWidth, requestHeight, requestMode);
 	result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, ctrl,
 		!requestMode ? UVC_FRAME_FORMAT_BGR : UVC_FRAME_FORMAT_MJPEG,
 		requestWidth, requestHeight, requestMinFps, requestMaxFps
@@ -526,7 +536,7 @@ void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
 		LOGI("Streaming...");
 #endif
 		if (frameMode) {
-			// MJPEG mode
+			// compressed mode
 			for ( ; LIKELY(isRunning()) ; ) {
 				frame_mjpeg = waitPreviewFrame();
 				if (LIKELY(frame_mjpeg)) {
@@ -542,11 +552,11 @@ void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
 				}
 			}
 		} else {
-			// yuvyv mode
+			// uncompressed mode
 			for ( ; LIKELY(isRunning()) ; ) {
 				frame = waitPreviewFrame();
 				if (LIKELY(frame)) {
-					frame = draw_preview_one(frame, &mPreviewWindow, uvc_any2rgbx, 4);
+					frame = draw_preview_one(frame, &mPreviewWindow, uvc_any2rgb, 3);
 					addCaptureFrame(frame);
 				}
 			}
@@ -645,7 +655,7 @@ uvc_frame_t *UVCPreview::draw_preview_one(uvc_frame_t *frame, ANativeWindow **wi
 					copyToSurface(converted, window);
 					pthread_mutex_unlock(&preview_mutex);
 				} else {
-					LOGE("failed converting");
+					//LOGE("failed converting");
 				}
 				recycle_frame(converted);
 			}
