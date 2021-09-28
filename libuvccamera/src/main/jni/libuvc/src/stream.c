@@ -457,6 +457,7 @@ static uvc_error_t _uvc_get_stream_ctrl_format(uvc_device_handle_t *devh,
 #endif
 	DL_FOREACH(format->frame_descs, frame)
 	{
+	    LOGE("[frame] wWidth: %d, wHeight: %d (%d, %d)", frame->wWidth, frame->wHeight, width, height);
 		if (frame->wWidth != width || frame->wHeight != height)
 			continue;
 
@@ -477,26 +478,47 @@ static uvc_error_t _uvc_get_stream_ctrl_format(uvc_device_handle_t *devh,
 				}
 			}
 		} else {
+		    LOGE("wWidth: %d", frame->wWidth);
+		    LOGE("wHeight: %d", frame->wHeight);
+		    LOGE("dwMinFrameInterval: %d", frame->dwMinFrameInterval);
+		    LOGE("dwMaxFrameInterval: %d", frame->dwMaxFrameInterval);
+		    LOGE("dwFrameIntervalStep: %d", frame->dwFrameIntervalStep);
+		    LOGE("bFrameIntervalType: %d", frame->bFrameIntervalType);
 			int32_t fps;
 			for (fps = max_fps; fps >= min_fps; fps--) {
 				if (UNLIKELY(!fps)) continue;
 				uint32_t interval_100ns = 10000000 / fps;
 				uint32_t interval_offset = interval_100ns - frame->dwMinFrameInterval;
 				LOGV("fps:%d", fps);
+
 				if (interval_100ns >= frame->dwMinFrameInterval
 					&& interval_100ns <= frame->dwMaxFrameInterval
-					&& !(interval_offset
-						&& (interval_offset % frame->dwFrameIntervalStep) ) ) {
-					ctrl->bmHint = (1 << 0); /* don't negotiate interval */
+					&& !(interval_offset && (interval_offset % frame->dwFrameIntervalStep))
+                ) {
+					ctrl->bmHint = (1 << 0); // don't negotiate interval
 					ctrl->bFormatIndex = format->bFormatIndex;
 					ctrl->bFrameIndex = frame->bFrameIndex;
 					ctrl->dwFrameInterval = interval_100ns;
 
 					goto found;
 				}
+				else if (frame->dwMinFrameInterval == frame->dwMaxFrameInterval && frame->dwFrameIntervalStep == 0) {
+				    // Sam 2021/9/28
+				    // ADV2S using STMicroelectronics vid:1155 pid:22336 sn:308335823536
+				    // min, max interval are both 338000, fps is 29.59
+				    // (not supported in this uvc version ?)
+				    // Forced to go found
+				    ctrl->bmHint = (1 << 0);
+                    ctrl->bFormatIndex = format->bFormatIndex;
+                    ctrl->bFrameIndex = frame->bFrameIndex;
+                    ctrl->dwFrameInterval = interval_100ns;
+
+                    goto found;
+				}
 			}
 		}
 	}
+	LOGE("_uvc_get_stream_ctrl_format NOT FOUND");
 	result = UVC_ERROR_INVALID_MODE;
 fail:
 	uvc_release_if(devh, ctrl->bInterfaceNumber);
@@ -1462,17 +1484,23 @@ uvc_error_t uvc_stream_start_bandwidth(uvc_stream_handle_t *strmh,
 		} else {
 			config_bytes_per_packet = strmh->cur_ctrl.dwMaxPayloadTransferSize;
 		}
+
 //#if !defined(__LP64__)
 //		LOGI("config_bytes_per_packet=%d", config_bytes_per_packet);
 //#else
 //		LOGI("config_bytes_per_packet=%ld", config_bytes_per_packet);
 //#endif
+/*
+        // Sam 2021/9/28
+        // ADV2S using STMicroelectronics vid:1155 pid:22336 sn:308335823536
+        // blocked by this prevention
+        // zero divided exception is not likely to happen
 		if (UNLIKELY(!config_bytes_per_packet)) {	// XXX added to privent zero divided exception at the following code
 			ret = UVC_ERROR_IO;
 			LOGE("config_bytes_per_packet is zero");
 			goto fail;
 		}
-
+*/
 		/* Go through the altsettings and find one whose packets are at least
 		 * as big as our format's maximum per-packet usage. Assume that the
 		 * packet sizes are increasing. */
